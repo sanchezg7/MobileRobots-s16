@@ -109,15 +109,18 @@ void WallFollowing(int Kp)
   errorL = SET_PT - shrtL; //error from LEFT
   gainL = Kp * errorL;
 
-  if(shrtL > 5 && shrtF <= 10)
+  if(shrtL > 5)
   { //speed up right slow down left
     
-    lVel = 90 - errorL;    
+    lVel = 90 - errorL;   
+    rVel = 88 + gainL;
     
   } else if(shrtL < 5)
   {
     //speed up left slow down RIGHT
-    rVel = 90 - errorL;    
+    rVel = 90 - gainL;   
+    lVel = 88 + gainL;
+    
   } else {
     //stop in front of a wall from SET_PT
     errorF = SET_PT - shrtF; //calc error
@@ -129,13 +132,16 @@ void WallFollowing(int Kp)
   //RIGHT turn at a corner
   if(shrtL <= 5 && shrtF <=6) myMover.spin_clkwse();
 
-  
-
 
   //move forward until Front sensor dist < 6 three times
   //initiate a 90 degree right turn and move forward
   //if left sensor is greater than SET_PT slow the left wheel down by error * Kp
   //else if left sensor is less than SET_PT slow the right wheel down
+  Serial.print("errorF: ");
+  Serial.print(errorF);
+  Serial.print("\t lVel ");
+  Serial.print(lVel);
+  Serial.print(rVel);
   
   follow_vel(lVel, rVel);
 }
