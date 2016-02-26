@@ -24,6 +24,7 @@ const int LFSensor = A3;
 //SENSOR READINGS
 int shrtF = 0; //short front reading
 int shrtL = 0; //short left reading
+int shrtR = 0; //short right reading
 
 //CONTROL SYSTEM VARIABLES
 double array[] = {0.5, 1, 3, 5, 20};
@@ -31,8 +32,10 @@ int index = 2;
 double Kp; //Kp value
 int gainF;
 int gainL;
+int gainR;
 int errorF; //front error
 int errorL; //left error
+int errorR; //right error
 
 //SERVOR VELOCITIES
 int rVel; //right wheel
@@ -49,8 +52,8 @@ void setup() {
 
   Serial.begin(9600);
   lcd.begin(16,2);
-  lcd.setBacklight(RED);
-  //lcd.print("Wall_Following");
+  lcd.setBacklight(WHITE);
+  //lcd.print("Corridor Navigation");
   lcd.setCursor(0,0);
 
   Kp = array[index];
@@ -66,13 +69,11 @@ void loop() {
     delay(200);
     if(buttons & BUTTON_SELECT)
     {
-      if(go == 0)
-      {
+      if(go == 0){
         lVel = 100;
-        rVel = 80;        
+        rVel = 80; 
         go = 1;
       }
-      
            
     } else if(buttons & BUTTON_UP)
       {
@@ -84,13 +85,11 @@ void loop() {
       }
   }
   if (go == 1){
-    WallFollowing(Kp);  
+    corridorNavigation(Kp);  
   }
-
-  
   printLCD(computeDistance_SIR(average(SFSensor,5))
-      , computeDistance_SIR(average(SLSensor,5)), 90, 90);
-  
+      , computeDistance_SIR(average(SLSensor,5)), computeDistance_SIR(average(SRSensor,5)), 90, 90);
+      
   delay(250);
 
 }
@@ -106,66 +105,50 @@ int average(int sensor, int loops)
   return value / loops;
 }
 
-
-void WallFollowing(int Kp)
+//handles the corridor navigation
+void corridorNavigation(int Kp)
 {
   shrtF = average(SFSensor, 5);
   shrtL = average(SLSensor, 5);
+  shrtR = average(SRSensor, 5);
 
   shrtF = computeDistance_SIR(shrtF);
   shrtL = computeDistance_SIR(shrtL);
+  shrtR = computeDistance_SIR(shrtR);
 
-  errorL = SET_PT - shrtL; //error from LEFT
   errorF = SET_PT - shrtF; //error from FRONT
-  gainL = Kp * errorL;
-  gainF = Kp * errorF;
+  errorL = SET_PT - shrtL; //error from LEFT
+  errorR = SET_PT - shrtR; //error from RIGHT
+
+  
+  gainF = errorF * Kp;
+  gainL = errorL * Kp;
+  gainR = errorR * Kp; 
 
   if(shrtF > 6) //check front wall to know to keep going forward
   {
-    if(shrtL > 5) //too far from left wall
+    if(shrtR < 6) //too close to right wall
     {
       lVel = 93;
       rVel = 85;
-    }else if(shrtL < 5) //too close to left wall
+    }else if(shrtL < 6) //too close to left wall
     {
-      lVel = 95;
-      rVel = 87;
-    }else if(shrtL == 5) //align
-    {
-      lVel = 90 - gainF;
-      rVel = 90 + gainF;
-    }else
+      lVel = 94;
+      rVel = 88;
+    }else if(shrtL == 5 && shrtR == 5) //align
     {
       lVel = 90 - gainF;
       rVel = 90 + gainF;
     }
-  } else if(shrtF <= 5)//decision to make right turn
+  } else if(shrtF <= 6)//decision to make right turn
   {
-    lVel = 100;
-    rVel = 100;
+    lVel = 97;
+    rVel = 89;
   }
-
-
-
-
-  //RIGHT turn at a corner
-//  if(shrtL <= 5 && shrtF <=5){
-//    lcd.setBacklight(WHITE);
-//    myMover.spin_clkwse();
-//    lcd.setBacklight(RED);
-//  }
-
-  printLCD(shrtF, shrtL, lVel, rVel); //front and left sensor
-
-  Serial.print("errorF: ");
-  Serial.print(errorF);
-  Serial.print("\t lVel ");
-  Serial.print(lVel);
-  Serial.print(rVel);
   
+
   follow_vel(lVel, rVel);
 }
-
 void follow_vel(int lVel, int rVel)
 {
   if(lVel > 100) lVel = 100;
@@ -183,8 +166,9 @@ void follow_vel(int lVel, int rVel)
     Serial.print(rVel);
     Serial.print("\n");
 }
+  
 
-void printLCD(int shrtF, int shrtL, int lVel, int rVel)
+void printLCD(int shrtF, int shrtL, int shrtR, int lVel, int rVel)
 {
 
   if( shrtF != -1)
@@ -199,6 +183,13 @@ void printLCD(int shrtF, int shrtL, int lVel, int rVel)
     lcd.setCursor(6,1);
     lcd.print("L: ");
     lcd.print(shrtL);
+    lcd.print(" ");
+  }
+  if(shrtR != -1)
+  {
+    lcd.setCursor(11,1);
+    lcd.print("R: ");
+    lcd.print(shrtR);
     lcd.print(" ");
   }
 

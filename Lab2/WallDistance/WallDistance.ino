@@ -82,7 +82,7 @@ void loop() {
   }
   
   if(start == 1){
-    /*
+    
       shrtF = average(SFSensor, 5); //short Front
       
       shrtF = computeDistance_SIR(shrtF);
@@ -114,17 +114,18 @@ void loop() {
       cTime += millis();
       
       printLCD(shrtF);
+      Serial.print(Kp);
+      Serial.print("\t");
       Serial.print((cTime-tBegin)/10000);
-      Serial.print("\tlVel:");
-      Serial.print(lVel);
-      Serial.print("  rVel");
-      Serial.print(rVel);
-      Serial.print("\n");*/
+      //Serial.print("  dis:");
+      Serial.print("\t");
+      Serial.print(shrtF); //distance from the wall
+      Serial.print("\n");
 
       cTime += millis();
       
-      Serial.print((cTime - tBegin));
-      Serial.print("\n");
+      //Serial.print((cTime - tBegin));
+      //Serial.print("\n");
       delay(500);
   }
 }
