@@ -122,31 +122,21 @@ void Navigation(int Kp)
     }
   } else if(shrtF <= 5)//decision to make right turn
   {
-    //lVel = 100;
-    //rVel = 100;
-    //to implement: stop then turn right on the spot
-    //start moving
+    myMover.spin_clkwse(); //make right turn
   }
 
-  follow_vel(lVel, rVel);
+  myMover.follow_vel(lVel, rVel);
 }
 
-void follow_vel(int lVel, int rVel)
+//make multiple measurements and return the average
+int average(int sensor, int loops)
 {
-  if(lVel > 100) lVel = 100;
-    else if(lVel < 90) lVel = 90; //prevent go backward
-
-   //check for saturation in right wheel
-   if(rVel < 81) rVel = 81;
-        else if(rVel > 90) rVel = 90;
-
-    myMover.cmd_vel(lVel, rVel);
-
-    Serial.print("lVel:");
-    Serial.print(lVel);
-    Serial.print("\trVel");
-    Serial.print(rVel);
-    Serial.print("\n");
+  int value;
+  for(int i = 0; i < loops; ++i)
+  {
+     value += analogRead(sensor);
+  }
+  return value / loops;
 }
 
 void printLCD(int shrtF, int shrtL, int lVel, int rVel)
