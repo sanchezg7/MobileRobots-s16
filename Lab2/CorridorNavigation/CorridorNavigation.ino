@@ -129,12 +129,12 @@ void corridorNavigation(int Kp)
   {
     if(shrtR < 6) //too close to right wall
     {
-      lVel = 93;
-      rVel = 85;
+      lVel = 93 - gainR;
+      rVel = 85 + gainR;
     }else if(shrtL < 6) //too close to left wall
     {
-      lVel = 94;
-      rVel = 88;
+      lVel = 94 - gainL;
+      rVel = 88 + gainL;
     }else if(shrtL == 5 && shrtR == 5) //align
     {
       lVel = 90 - gainF;
@@ -142,8 +142,8 @@ void corridorNavigation(int Kp)
     }
   } else if(shrtF <= 6)//decision to make right turn
   {
-    lVel = 97;
-    rVel = 89;
+    lVel = 97 - gainF;
+    rVel = 89 + gainF;
   }
   
 
