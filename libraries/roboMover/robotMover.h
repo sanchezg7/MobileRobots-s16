@@ -27,6 +27,7 @@ public:
 	void fig8_cnt_circle_20(int time);
 	void follow_vel(int lVel, int rVel);
 	void rightTurn();
+	void leftTurn();
 
 };
 
