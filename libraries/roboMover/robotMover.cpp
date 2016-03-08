@@ -80,6 +80,10 @@ void robotMover::fig8_cnt_circle_20(int time)
 	cmd_vel(90,90);
 }
 
+void robotMover::rightTurn(){
+	cmd_vel(100, 100);
+}
+
 void robotMover::follow_vel(int lVel, int rVel)
 {
   if(lVel > 100) lVel = 100;
