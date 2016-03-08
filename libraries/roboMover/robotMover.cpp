@@ -79,3 +79,22 @@ void robotMover::fig8_cnt_circle_20(int time)
 	delay(time); 
 	cmd_vel(90,90);
 }
+
+void robotMover::follow_vel(int lVel, int rVel)
+{
+  if(lVel > 100) lVel = 100;
+    else if(lVel < 90) lVel = 90; //prevent go backward
+
+   //check for saturation in right wheel
+   if(rVel < 81) rVel = 81;
+        else if(rVel > 90) rVel = 90;
+
+    cmd_vel(lVel, rVel);
+    /*
+    Serial.print("lVel:");
+    Serial.print(lVel);
+    Serial.print("\trVel");
+    Serial.print(rVel);
+    Serial.print("\n");
+	*/
+}
