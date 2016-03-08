@@ -84,6 +84,10 @@ void robotMover::rightTurn(){
 	cmd_vel(100, 100);
 }
 
+void robotMover::leftTurn(){
+	cmd_vel(80,80);
+}
+
 void robotMover::follow_vel(int lVel, int rVel)
 {
   if(lVel > 100) lVel = 100;
