@@ -122,7 +122,7 @@ void Navigation(int Kp)
     }
   } else if(shrtF <= 5)//decision to make right turn
   {
-    myMover.spin_clkwse(); //make right turn
+    myMover.rightTurn(); //make right turn
   }
 
   myMover.follow_vel(lVel, rVel);
