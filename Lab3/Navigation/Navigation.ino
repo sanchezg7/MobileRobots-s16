@@ -101,31 +101,37 @@ void Navigation(int Kp)
   gainL = Kp * errorL;
   gainF = Kp * errorF;
 
-  if(shrtF > 6) //check front wall to know to keep going forward
+  myMover.follow_vel(lVel, rVel);
+
+  if(shrtF >= 5) //check front wall to know to keep going forward
   {
     if(shrtL > 5) //too far from left wall
     {
+      //lVel = 93;//weak batteries
+      //rVel = 85;//weak batteries
       lVel = 93;
-      rVel = 85;
+      rVel = 86;
     }else if(shrtL < 5) //too close to left wall
     {
-      lVel = 95;
-      rVel = 87;
+//      lVel = 95;//weak batteries
+//      rVel = 87;//weak batteries
+      lVel = 97;//fresh batteries
+      rVel = 87;//fresh
     }else if(shrtL == 5) //align
     {
       lVel = 90 - gainF;
       rVel = 90 + gainF;
-    }else
-    {
-      lVel = 90 - gainF;
-      rVel = 90 + gainF;
     }
-  } else if(shrtF <= 5)//decision to make right turn
+  } else if(shrtF <= 4)//decision to make right turn
   {
-    myMover.rightTurn(); //make right turn
+//    myMover.rightTurn(); //make right turn
+      lcd.setBacklight(RED);
+      lVel = 100;
+      rVel = 100;
+      delay(300);
   }
 
-  myMover.follow_vel(lVel, rVel);
+  
 }
 
 //make multiple measurements and return the average
