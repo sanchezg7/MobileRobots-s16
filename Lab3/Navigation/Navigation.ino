@@ -11,7 +11,7 @@
 #define BLUE 0x4
 #define VIOLET 0x5
 #define WHITE 0x7
-#define SET_PT 5 //5 inches
+//#define SET_PT 5 //5 inches
 
 Adafruit_RGBLCDShield lcd = Adafruit_RGBLCDShield();
 int go = 0;
@@ -90,41 +90,54 @@ void loop() {
 
 void Navigation(int Kp)
 {
-  shrtF = average(SFSensor, 5);
-  shrtL = average(SLSensor, 5);
-
-  shrtF = computeDistance_SIR(shrtF);
-  shrtL = computeDistance_SIR(shrtL);
-
-  errorL = SET_PT - shrtL; //error from LEFT
-  errorF = SET_PT - shrtF; //error from FRONT
-  gainL = Kp * errorL;
-  gainF = Kp * errorF;
-
-  if(shrtF > 6) //check front wall to know to keep going forward
+  int SET_PT = 5;
+  while(1)
   {
-    if(shrtL > 5) //too far from left wall
-    {
-      lVel = 93;
-      rVel = 85;
-    }else if(shrtL < 5) //too close to left wall
-    {
-      lVel = 95;
-      rVel = 87;
-    }else if(shrtL == 5) //align
-    {
-      lVel = 90 - gainF;
-      rVel = 90 + gainF;
-    }else
-    {
-      lVel = 90 - gainF;
-      rVel = 90 + gainF;
-    }
-  } else if(shrtF <= 5)//decision to make right turn
-  {
-    myMover.rightTurn(); //make right turn
+    shrtF = average(SFSensor, 10);//updated from 5 to 10
+    shrtL = average(SLSensor, 10);//updated from 5 to 10
+    
+    shrtF = computeDistance_SIR(shrtF);
+    shrtL = computeDistance_SIR(shrtL);
+    
+    errorL = SET_PT - shrtL; //error from LEFT
+    errorF = SET_PT - shrtF; //error from FRONT
+    gainL = Kp * errorL;
+    gainF = Kp * errorF;
+    
+      if(shrtF >= 5) //check front wall to know to keep going forward
+      {
+
+        //for these configurations, consider literally stopping the respective wheel
+        if(shrtL > 5) //too far from left wall
+        {
+          lcd.setBacklight(GREEN);
+          //lVel = 93;//weak batteries
+          //rVel = 85;//weak batteries
+          lVel = 93;
+          rVel = 86;
+        }else if(shrtL < 5) //too close to left wall
+        {
+           lcd.setBacklight(YELLOW);
+      //      lVel = 95;//weak batteries
+      //      rVel = 87;//weak batteries
+          lVel = 97;//fresh batteries
+          rVel = 87;//fresh
+        }else if(shrtL == 5) //align (full speed straight)
+        {
+          lcd.setBacklight(BLUE);
+          lVel = 90 - gainF;
+          rVel = 90 + gainF;
+        }
+      } else if(shrtF <= 4)//decision to make right turn
+      {
+      //    myMover.rightTurn(); //make right turn
+          lcd.setBacklight(VIOLET);
+          lVel = 100;
+          rVel = 100;
+          delay(300);
+      }
   }
-
+  printLCD(shrtF, shrtL, lVel, rVel);
   myMover.follow_vel(lVel, rVel);
 }
 
