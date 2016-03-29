@@ -118,18 +118,28 @@ void Navigation(){
   while(1){
     shrtF = trueDist(SFSensor);
     shrtL = trueDist(SLSensor);
-
+    //consider long range sensor
     if(shrtF <10)
     {
       if(shrtF >= 5){
         if(shrtL < 5 ) //too close to wall
         {
+          //85 and 95 as speed
+          lVel = 100;
+          rVel = 87;
+          delay(1000);
           lVel = 100;
           rVel = 87; 
         } else if(shrtL > 5){ //too far
           lVel = 93;
           rVel = 80;
+          delay(1000);
+          lVel = 93;
+          rVel = 87;
         } else if(shrtL == 5){ //aligned with wall
+          lVel = 100;
+          rVel = 80;
+          delay(1000);
           lVel = 100;
           rVel = 80;
         }
@@ -137,6 +147,9 @@ void Navigation(){
         //RIGHT turn
         if (shrtL < 6){
           lcd.setBacklight(RED);
+          lVel = 100;
+          rVel = 100;
+          delay(1000);
           lVel = 100;
           rVel = 100;  
         }
@@ -146,6 +159,9 @@ void Navigation(){
       if(shrtL >= 9){
         //left turn 
         lcd.setBacklight(BLUE);
+        lVel = 80;
+        rVel = 80;
+        delay(1000);
         lVel = 80;
         rVel = 80;
       }
