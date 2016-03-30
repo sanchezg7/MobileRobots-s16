@@ -98,11 +98,6 @@ void robotMover::follow_vel(int lVel, int rVel)
         else if(rVel > 90) rVel = 90;
 
     cmd_vel(lVel, rVel);
-    /*
-    Serial.print("lVel:");
-    Serial.print(lVel);
-    Serial.print("\trVel");
-    Serial.print(rVel);
-    Serial.print("\n");
-	*/
+    
+	delay(1000); //hard coded to prevent resampling 
 }
