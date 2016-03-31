@@ -99,5 +99,5 @@ void robotMover::follow_vel(int lVel, int rVel)
 
     cmd_vel(lVel, rVel);
     
-	delay(1000); //hard coded to prevent resampling 
+	//delay(1000); //hard coded to prevent resampling 
 }

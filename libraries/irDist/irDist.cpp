@@ -14,7 +14,7 @@ int computeDistance_SIR(int value){
               else if( value > 143 && value < 167) distance = 7; //7 inches
                 else if(value > 121 && value < 136) distance = 8;//149 causes an overlap with 7 & 8 inches, changed to 136
                   else if (value > 107 && value < 135) distance = 9;
-                    else if(value < 100) distance = 10; //10 inches
+                    else if(value < 100) distance = 10; //used to be 10 inches 3-30-2016
 
 /*
   Serial.print(" sensor: ");
