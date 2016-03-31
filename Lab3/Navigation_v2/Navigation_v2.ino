@@ -64,25 +64,27 @@ void loop() {
     }
     
   }
-  printLCD(trueDist(SFSensor), trueDist(SLSensor), 90, 90);
+  printLCD(trueDist(SFSensor, 10), trueDist(SLSensor, 10), 90, 90);
 }
 
-int trueDist(int sensor){
-  return computeDistance_SIR(average(sensor, 10)); //10 samples
-  
-}
 
-int average(int sensor, int loops){
-  int value;
+int trueDist(int sensor, int loops){
+  int value = 0;
   for(int i = 0; i < loops; ++i)
   {
-     value += analogRead(sensor);
+    int distance = computeDistance_SIR(analogRead(sensor));
+    if(distance != -1)
+    {
+      value += distance;  
+    }
+    
   }
   return value / loops;
 }
 
 void printLCD(int shrtF, int shrtL, int lVel, int rVel)
 {
+  
 
   if( shrtF != -1)
   {
@@ -101,6 +103,7 @@ void printLCD(int shrtF, int shrtL, int lVel, int rVel)
 
   if(lVel != 90)
   {
+    
     lcd.setCursor(0,0);
     lcd.print("lV: ");
     lcd.print(lVel);
@@ -108,50 +111,132 @@ void printLCD(int shrtF, int shrtL, int lVel, int rVel)
 
   if(rVel != 90)
   {
-    lcd.setCursor(6, 0);
+    lcd.setCursor(7, 0);
     lcd.print("rV: ");
     lcd.print(rVel);
   }
 }
 
 void Navigation(){
+  int lngF; //long Front value
+  bool cornerFlg = false;
+  bool leftTrnFlg = false;
+  
   while(1){
-    shrtF = trueDist(SFSensor);
-    shrtL = trueDist(SLSensor);
+    shrtF = trueDist(SFSensor, 10);
+    shrtL = trueDist(SLSensor, 10);
+    lngF = trueDist(LFSensor, 10);
 
-    if(shrtF <10)
-    {
-      if(shrtF >= 5){
-        if(shrtL < 5 ) //too close to wall
-        {
-          lVel = 100;
-          rVel = 87; 
-        } else if(shrtL > 5){ //too far
-          lVel = 93;
-          rVel = 80;
-        } else if(shrtL == 5){ //aligned with wall
-          lVel = 100;
-          rVel = 80;
-        }
-      } else if(shrtF < 5){
-        //RIGHT turn
-        if (shrtL < 6){
-          lcd.setBacklight(RED);
-          lVel = 100;
-          rVel = 100;  
-        }
+    //CORNER case - YELLOW
+    //LEFT turn - GREEN
+    //too FAR - TEAL
+    //too CLOSE - RED
+
+    
+
+      //GETTING CLOSE TO WALL
+      if(shrtF < 5)
+      {
+          //STOP the robot and resample
+          if(!cornerFlg)
+          {
+            myMover.follow_vel(90,90);
+            lcd.clear();
+            lcd.setBacklight(YELLOW);
+            lcd.print("Corner case check");
+            delay(1000);
+            cornerFlg = true;  
+            continue;
+          }else if(shrtL <= 5) 
+          { //check for for six if test doesnt work
+            //CORNER confirmed (right turn, to proceed)
+            cornerFlg = false; //reset the flag
+            
+            lVel = 100;
+            rVel = 100;
+            myMover.cmd_vel(lVel, rVel);
+            
+            delay(550); //FINE TUNE the right turn
+            
+          }
         
+      } else { //we dont care about the FRONT wall
+          //WALL FOLLOW SUCKA
+          
+          if(shrtL < 5 ) //too close to wall
+          {
+            lVel = 100;
+            rVel = 85; 
+            myMover.follow_vel(lVel, rVel);
+            
+            delay(200);
+            
+            
+          } else if(shrtL > 5){ //too far
+            if(shrtL >= 9)
+            {
+              //LEFT TURN CHECK
+              if(!leftTrnFlg){
+                leftTrnFlg = true;
+                delay(750); //allow the robot to move to the center of the cell to spin to the left
+                continue;  
+              }else{
+                leftTrnFlg = false;
+                
+                
+                myMover.follow_vel(90,90);
+                lcd.setCursor(0,0);
+                lcd.clear();
+                lcd.print("Left Turn Check!");
+                
+                //perform the left turn!
+                lVel = 80;
+                rVel = 80;
+                
+                myMover.follow_vel(lVel, rVel);
+                delay(900);
+
+                //make the robot go straight and then re-evaluate
+                lVel = 95;
+                rVel = 85;
+                myMover.follow_vel(100, 80);
+                delay(750);
+              }
+            }else{ // too FAR
+              lcd.setBacklight(TEAL);
+              lVel = 93;
+              rVel = 85;
+              myMover.follow_vel(lVel, rVel);
+              
+              delay(200);  
+            }
+            
+            
+          } else if(shrtL == 5){ //aligned with wall
+            lcd.setBacklight(WHITE);
+            lVel = 95;
+            rVel = 85;
+            myMover.follow_vel(lVel, rVel);
+            
+            delay(500); //allow robot to update quicker when aligned
+          }
       }
-    } else if(shrtF == 10){
-      if(shrtL >= 9){
-        //left turn 
-        lcd.setBacklight(BLUE);
-        lVel = 80;
-        rVel = 80;
-      }
+
+    if(leftTrnFlg){
+      leftTrnFlg = false;
     }
+    if(cornerFlg){
+      cornerFlg = false;
+    }
+    
     printLCD(shrtF, shrtL, lVel, rVel);
-    myMover.follow_vel(lVel, rVel);
+    //myMover.follow_vel(lVel, rVel);
   }
+}
+
+void rightTurn(){
+  myMover.cmd_vel(100, 100);
+  delay(1000);
+  
 }
 
