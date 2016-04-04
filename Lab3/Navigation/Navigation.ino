@@ -4,6 +4,7 @@
 #include <utility/Adafruit_MCP23017.h>
 #include <irDist.h>
 
+//lcd colors
 #define RED 0x1
 #define YELLOW 0x3
 #define GREEN 0x2
@@ -11,30 +12,24 @@
 #define BLUE 0x4
 #define VIOLET 0x5
 #define WHITE 0x7
-//#define SET_PT 5 //5 inches
 
 Adafruit_RGBLCDShield lcd = Adafruit_RGBLCDShield();
-int go = 0;
 
 const int SFSensor = A0;
 const int SLSensor = A1;
 const int SRSensor = A2;
 const int LFSensor = A3;
 
-//SENSOR READINGS
-int shrtF = 0; //short front reading
-int shrtL = 0; //short left reading
+int go = 0; //go flag for Navigation
 
-//CONTROL SYSTEM VARIABLES
-double Kp = 3; //Kp value
-int gainF;
-int gainL;
-int errorF; //front error
-int errorL; //left error
+//SENSOR Readings
+int shrtF = 0;
+int shrtL = 0;
+int shrtR = 0;
 
-//SERVOR VELOCITIES
-int rVel; //right wheel
-int lVel; //left wheel
+//SERVOR Velocities
+int rVel;
+int lVel;
 
 uint8_t buttons;
 
@@ -43,135 +38,93 @@ robotMover myMover;
 void setup() {
   // put your setup code here, to run once:
   myMover.attach_servos();
-  myMover.cmd_vel(90,90);
+  myMover.cmd_vel(90, 90);
 
   Serial.begin(9600);
   lcd.begin(16,2);
   lcd.setBacklight(WHITE);
   lcd.print("Navigation");
   lcd.setCursor(0,0);
+
 }
 
 void loop() {
   // put your main code here, to run repeatedly:
   buttons = lcd.readButtons();
-  
-  if(buttons)
-  {
-    delay(200);
-    if(buttons & BUTTON_SELECT)
-    {
-      if(go == 0)
-      {
+
+  if(buttons){
+    delay(200); //debounce
+    if(buttons & BUTTON_SELECT){
+      if(go == 0){
+        //start robot moving forward
         lVel = 100;
-        rVel = 80;        
+        rVel = 80;
         go = 1;
+        Navigation();
       }
-      
-           
-    } else if(buttons & BUTTON_UP)
-      {
-        lcd.setCursor(0,0);
-        lcd.print("Kp ");
-        lcd.print(Kp);
-      }
+    }
+    
   }
-  if (go == 1){
-    Navigation(Kp);  
-  }
-
-  
-  printLCD(computeDistance_SIR(average(SFSensor,5))
-      , computeDistance_SIR(average(SLSensor,5)), 90, 90);
-  
-  delay(250);
-
+  printLCD(trueDist(SFSensor, 20), trueDist(SLSensor, 20), trueDist_L(LFSensor, 20), 90, 90);
 }
 
-void Navigation(int Kp)
-{
-  int SET_PT = 5;
-  while(1)
-  {
-    shrtF = average(SFSensor, 10);//updated from 5 to 10
-    shrtL = average(SLSensor, 10);//updated from 5 to 10
-    
-    shrtF = computeDistance_SIR(shrtF);
-    shrtL = computeDistance_SIR(shrtL);
-    
-    errorL = SET_PT - shrtL; //error from LEFT
-    errorF = SET_PT - shrtF; //error from FRONT
-    gainL = Kp * errorL;
-    gainF = Kp * errorF;
-    
-      if(shrtF >= 5) //check front wall to know to keep going forward
-      {
 
-        //for these configurations, consider literally stopping the respective wheel
-        if(shrtL > 5) //too far from left wall
-        {
-          lcd.setBacklight(GREEN);
-          //lVel = 93;//weak batteries
-          //rVel = 85;//weak batteries
-          lVel = 93;
-          rVel = 86;
-        }else if(shrtL < 5) //too close to left wall
-        {
-           lcd.setBacklight(YELLOW);
-      //      lVel = 95;//weak batteries
-      //      rVel = 87;//weak batteries
-          lVel = 97;//fresh batteries
-          rVel = 87;//fresh
-        }else if(shrtL == 5) //align (full speed straight)
-        {
-          lcd.setBacklight(BLUE);
-          lVel = 90 - gainF;
-          rVel = 90 + gainF;
-        }
-      } else if(shrtF <= 4)//decision to make right turn
-      {
-      //    myMover.rightTurn(); //make right turn
-          lcd.setBacklight(VIOLET);
-          lVel = 100;
-          rVel = 100;
-          delay(300);
-      }
-  }
-  printLCD(shrtF, shrtL, lVel, rVel);
-  myMover.follow_vel(lVel, rVel);
-}
-
-//make multiple measurements and return the average
-int average(int sensor, int loops)
-{
-  int value;
+int trueDist(int sensor, int loops){
+  int value = 0;
   for(int i = 0; i < loops; ++i)
   {
-     value += analogRead(sensor);
+    int distance = computeDistance_SIR(analogRead(sensor));
+    if(distance != -1)
+    {
+      value += distance;  
+    }
+    
   }
   return value / loops;
 }
 
-void printLCD(int shrtF, int shrtL, int lVel, int rVel)
+int trueDist_L(int sensor, int loops){
+  int value = 0;
+  for(int i = 0; i<loops; ++i)
+  {
+    int distance = computeLongDistance(analogRead(sensor));
+    if(distance != -1)
+    {
+      value+= distance;
+    }
+  }
+  return value / loops;
+  
+}
+
+void printLCD(int shrtF, int shrtL, int lngF, int lVel, int rVel)
 {
+  
 
   if( shrtF != -1)
   {
      lcd.setCursor(0,1);
-     lcd.print("F: ");
+     lcd.print("F:");
      lcd.print(shrtF);
      lcd.print(" ");
   }
   if(shrtL != -1)
   {
-    lcd.setCursor(6,1);
-    lcd.print("L: ");
+    lcd.setCursor(5,1);
+    lcd.print("L:");
     lcd.print(shrtL);
     lcd.print(" ");
   }
 
+//  if(lngF != -1){
+//    lcd.setCursor(10, 1);
+//    lcd.print("l:");
+//    lcd.print(lngF);
+//  }
+
   if(lVel != 90)
   {
+    
     lcd.setCursor(0,0);
     lcd.print("lV: ");
     lcd.print(lVel);
@@ -179,8 +132,181 @@ void printLCD(int shrtF, int shrtL, int lVel, int rVel)
 
   if(rVel != 90)
   {
-    lcd.setCursor(6, 0);
+    lcd.setCursor(7, 0);
     lcd.print("rV: ");
     lcd.print(rVel);
   }
 }
+
+void Navigation(){
+  lcd.clear();
+  int lngF; //long Front value
+  bool cornerFlg = false;
+  bool leftTrnFlg = false;
+
+  int counter = 0;
+  int wfCounter = 0;
+  while(1)
+  {
+    shrtF = trueDist(SFSensor, 10);
+    shrtL = trueDist(SLSensor, 10);
+    shrtR = trueDist(SRSensor, 10);
+    
+    printLCD(shrtF, shrtL, lngF, lVel, rVel);
+
+    //CORNER case - YELLOW
+    //LEFT turn - GREEN
+    //too FAR - TEAL
+    //too CLOSE - RED
+    
+
+      //WALL FOLLOWING
+      if(shrtF > 6)
+      {
+        //we dont care about the FRONT wall
+          if(shrtL <= 5 ) //TOO CLOSE TO THE WALL
+          {
+            ++wfCounter;
+            moveAwayFromWall();
+            if(wfCounter == 3)
+            { //offset the extreme moving away
+              moveCloserToWall(); 
+              wfCounter = 0;
+            }
+            
+          } else if(shrtL >= 6)
+            { //TOO FAR FROM THE WALL
+              if(shrtL >= 9)
+              {
+                //LEFT TURN CHECK
+                if(!leftTrnFlg)
+                {
+                  lcd.setBacklight(RED);
+                  lcd.setCursor(0,0);
+                  lcd.clear();
+                  lcd.print("Left Turn Check!");
+                  leftTrnFlg = true;
+                  //move forward a little
+                  moveForwardALittle();
+                  stopRobot();
+                  continue;  
+                }else
+                {//THIS IS WHERE THE LEFT TURN OCCURS        
+                  leftTrnFlg = false;
+                  
+                  //perform the left turn!
+                  leftTurn();
+                  wfCounter = 0; 
+  
+                }
+            }else
+            { // too FAR
+              lcd.setBacklight(TEAL);
+              ++wfCounter;
+              moveCloserToWall();
+              if(wfCounter == 3)
+              { //offset the moving away
+                //moveAwayFromWall();
+                wfCounter = 0;  
+              }
+            }
+          } else if(shrtL == 5){ //aligned with wall
+            lcd.setBacklight(WHITE);
+            alignWithWall();
+            //wfCounter = 0;
+          }
+         
+      } else//GETTING CLOSE TO WALL FROM FRONT
+      { 
+         //STOP the robot and resample
+        if(shrtL <= 5)//check left sensor to make sure it's a corner
+        {
+          if(!cornerFlg)
+            {
+              lcd.clear();
+              lcd.setBacklight(YELLOW);
+              lcd.print("Corner case check");
+              stopRobot();
+              cornerFlg = true;  
+              continue;
+            }else 
+            { 
+              //CORNER confirmed 
+              cornerFlg = false; //reset the flag
+              rightTurn();
+              wfCounter = 0;
+            }
+        } 
+      }
+
+    if(leftTrnFlg){
+      leftTrnFlg = false;
+    }
+    if(cornerFlg){
+      cornerFlg = false;
+    }
+  }
+}
+
+void rightTurn(){
+  
+  lVel = 100;
+  rVel = 90;
+  myMover.cmd_vel(lVel, rVel);
+  delay(1100);
+  
+}
+
+void leftTurn(){
+  //perform the left turn!
+  //myMover.cmd_vel(90, 80);
+  lVel = 90;
+  rVel = 80;
+  myMover.cmd_vel(lVel, rVel);
+  delay(1200);
+}
+
+
+// <= 5 95, 88
+// >= 7 92, 85
+void moveCloserToWall(){ //too far from wall
+  
+  //myMover.cmd_vel(93, 85);
+  lVel = 95; 
+  rVel = 83; //SPEED right up
+  myMover.cmd_vel(lVel, rVel);
+  //delay(200);  
+}
+
+void moveAwayFromWall(){ //too close to wall
+ // myMover.cmd_vel(95, 87);
+ lVel = 97; //SPEED left up
+ rVel = 86; 
+ myMover.cmd_vel(lVel, rVel);
+ //delay(200);       
+}
+
+void alignWithWall(){ //align
+  //myMover.cmd_vel(95, 85);
+  lVel = 95,
+  rVel = 86; //right motor is weaker
+  myMover.cmd_vel(lVel, rVel);
+  //delay(200); //allow robot to update quicker when aligned
+}
+
+void moveForwardALittle(){//move forward a little before left turn
+  //myMover.cmd_vel(95, 85);//allow robot to move forward a bit before turning left
+  lVel = 95;
+  rVel = 85;
+  myMover.cmd_vel(lVel, rVel);
+  delay(1200); //allow the robot to move to the center of the cell to spin to the left
+}
+
+void stopRobot(){//stops robot
+  //myMover.cmd_vel(90,90);
+  lVel = 90;
+  rVel = 90;
+  myMover.cmd_vel(lVel, rVel);
+  delay(500);
+}
+
