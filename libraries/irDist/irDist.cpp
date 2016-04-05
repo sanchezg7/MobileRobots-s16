@@ -25,3 +25,35 @@ int computeDistance_SIR(int value){
                                                   
   return distance;
 }
+
+int longComputeDist(int LValueF)
+{
+	int distance = -1;
+
+  //if (LValueF > 235 && LValueF < 520)
+  if(LValueF > 280 && LValueF < 520)
+  { 
+    distance = ((-.0397) * LValueF) + 28.146; //good from 9-17
+  } else if (LValueF > 160 && LValueF <= 240)
+  { // 21 to 30
+    distance = (-0.1341 * LValueF + 50.624);//y = -0.1341x + 50.624 
+  //} //else if(LValueF > 105 && LValueF <= 150){ //31 to 40
+    //distance = (-0.2294 * LValueF) + 65 + 1;//y = -0.2294x + 65.054
+    //distance = (-0.2334 * LValueF) + 66.127; // y = -0.2334x + 66.127 Worked
+  } else if(LValueF > 83 && LValueF <= 115)
+  {
+    distance = (-0.3079 * LValueF) + 75.64;//y = -0.3079x + 75.64
+  } else if (LValueF > 90 && LValueF < 96)
+  {
+    distance = 50;
+  }
+  else if (LValueF > 75 && LValueF < 85)
+  {
+    distance = 55;
+  } else if (LValueF > 56 && LValueF < 75)
+  {
+    distance = 59;
+  }
+
+  return (int) distance;
+}
