@@ -4,5 +4,6 @@
 
 
 int computeDistance_SIR(int value);
+int longComputeDist(int LValueF);
 
 #endif

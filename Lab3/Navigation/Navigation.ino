@@ -25,7 +25,7 @@ int go = 0; //go flag for Navigation
 //SENSOR Readings
 int shrtF = 0;
 int shrtL = 0;
-int shrtR = 0;
+int longF = 0;
 
 //SERVOR Velocities
 int rVel;
@@ -85,6 +85,21 @@ int trueDist(int sensor, int loops)
   return value / loops;
 }
 
+int longTrueDist(int LongSensor, int loops)
+{
+  int value = 0;
+
+  for(int i = 0; i < loops; ++i)
+  {
+    int distance = longComputeDist(analogRead(LongSensor));
+    if(distance != -1)
+    {
+      value += distance;  
+    }
+  }
+  return value / loops;
+}
+
 
 void printLCD(int shrtF, int shrtL, int lVel, int rVel)
 {
@@ -130,7 +145,7 @@ void Navigation()
   {
     shrtF = trueDist(SFSensor, 10);
     shrtL = trueDist(SLSensor, 10);
-    //shrtR = trueDist(SRSensor, 10);
+    longF = longTrueDist(LFSensor, 20);
     
     printLCD(shrtF, shrtL, lngF, rVel);
 
@@ -160,14 +175,23 @@ void Navigation()
       //suspect that it is time for a LEFT turn sequence
       if(leftTrnFlg)
       {
-        if(isAWall(shrtF))
-        {
-          //perform left turn
-          leftTurn();
-          leftTrnFlg = false;
-          continue;
-        }
-      }else{ leftTrnFlg = isAWall(shrtF); }
+        moveForwardALittle();
+        leftTurn();
+        leftTrnFlg = false;
+        continue;
+//        if(isAWall(shrtF))
+//        {
+//          //perform left turn
+//          leftTurn();
+//          leftTrnFlg = false;
+//          continue;
+//        }
+      }else
+      { 
+        stopRobot();
+        leftTrnFlg = isAWall(shrtF); 
+        continue;
+      }
         
     }
   }
@@ -176,6 +200,11 @@ void Navigation()
 bool isAWall(int shrtF)
 {
   return shrtF < 6;
+}
+
+bool longIsAWall(int longF)
+{
+  return (longF < 21 && longF > 9);
 }
 
 
@@ -210,8 +239,8 @@ void wallFollow(int* wfCntr, const int shrtL)
   return;
 }
 
-void rightTurn(){
-  
+void rightTurn()
+{  
   lVel = 100;
   rVel = 90;
   myMover.cmd_vel(lVel, rVel);
@@ -219,7 +248,8 @@ void rightTurn(){
   
 }
 
-void leftTurn(){
+void leftTurn()
+{
   //perform the left turn!
   //myMover.cmd_vel(90, 80);
   lVel = 90;
