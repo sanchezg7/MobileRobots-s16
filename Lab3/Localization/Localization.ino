@@ -1,343 +1,345 @@
-
 #include <robotMover.h>
-#include <Wire.h>
-#include <Adafruit_RGBLCDShield.h>
-#include <utility/Adafruit_MCP23017.h>
+//#include <Wire.h>
+//#include <Adafruit_RGBLCDShield.h>
+//#include <utility/Adafruit_MCP23017.h>
+//#include <Arduino.h>
+//#include <Servo.h>
 #include <irDist.h>
 
-#define RED 0x1
-#define YELLOW 0x3
-#define GREEN 0x2
-#define TEAL 0x6
-#define BLUE 0x4
-#define VIOLET 0x5
-#define WHITE 0x7
-#define SET_PT 5 //5 inches
+//#define RED 0x1
+//#define YELLOW 0x3
+//#define GREEN 0x2
+//#define TEAL 0x6
+//#define BLUE 0x4
+//#define VIOLET 0x5
+//#define WHITE 0x7
 
 Adafruit_RGBLCDShield lcd = Adafruit_RGBLCDShield();
-int go = 0;
+
 
 const int SFSensor = A0;
 const int SLSensor = A1;
 const int SRSensor = A2;
 const int LFSensor = A3;
 
+int go = 0; //signals the beginning of robot execution
+
 //SENSOR READINGS
 int shrtF = 0; //short front reading
 int shrtL = 0; //short left reading
 
-//CONTROL SYSTEM VARIABLES
-int Kp =  3; //Kp value
-int gainF;
-int gainL;
-int errorF; //front error
-int errorL; //left error
+/*
+ * Definition in the robotMover class definition
+ */
+//typedef struct orientation {
+//  char mDirection;
+//  int color;
+//} orientation;
 
-
-typedef struct orientation{
-  char direction;
-  int color;
-} orientation;
-
-//Localization Variables
 orientation mOrientation[4];
-int indexDirection = 1;
-
-char robotDirection;
-
-//SERVOR VELOCITIES
-int rVel; //right wheel
-int lVel; //left 
 
 uint8_t buttons;
+
+int toCell = 13;
+
+char grid[4][4] = {'X'};
+char updatedDirection = 'E'; //global variable to update direction
 
 robotMover myMover;
 
 void setup() {
   // put your setup code here, to run once:
   myMover.attach_servos();
-  myMover.cmd_vel(90,90);
+  myMover.cmd_vel(90, 90);
 
   Serial.begin(9600);
-  lcd.begin(16,2);
-  lcd.setBacklight(WHITE);
+  lcd.begin(16, 2);
+  lcd.setBacklight(RED);
   //lcd.print("Localization");
-  lcd.setCursor(0,0);
+  lcd.setCursor(0, 0);
 
-  void configureArray();
-  
-  for(int i =0; i <= 16; ++i){
+  cnfgOrientations(mOrientation);
+  for (int i = 0; i <= 16; ++i) {
     updateCellStatus(i, 'X');
   }
-
-  indexDirection = 1;
-  robotDirection = mOrientation[indexDirection].direction; //set default direction to East
-
 }
 
-
-
-
 //assume our starting position is at cell 13 pointing East
-void loop() {
+void loop()
+{
   // put your main code here, to run repeatedly:
   buttons = lcd.readButtons();
 
-  if(buttons)
+  if (buttons)
   {
     delay(200);
-    if(buttons & BUTTON_SELECT)
+    if (buttons & BUTTON_SELECT)
     {
-      if(go == 0)
-      {
-        lVel = 100;
-        rVel = 80;        
-        go = 1;
-      }
-    } else if(buttons & BUTTON_UP)
-      {
-        lcd.clear();
-        lcd.setCursor(0,0);
-        lcd.print("Kp ");
-        lcd.print(Kp);
-      }
+      if (go == 0)
+        Localization();
+    }
   }
-  if (go == 1){
-    Localization(Kp);  
-  }
+}
+//******************************************
 
-  
-  
+void print2DigitPayLoad(int payLoad, int startPos)
+{
+  //print the cell that it's CURRENTLY in
+  if (toCell >= 10)
+  {
+    lcd.setCursor(startPos, 1);
+    lcd.print(payLoad);
+  } else {
+    lcd.setCursor(startPos, 1);
+    lcd.print(" ");
+    lcd.print(payLoad);
+  }
 }
 
-void Localization(int Kp){
+void Localization()
+{
+  //Localization Variables
   //always starting East in block 13
-  
-  //take a sample of the IR and determine where to go
-  //left wall following (left IR sensor)
-  //if aligned then said value from gainF
-  //if at a corner, then turn right (& update direction)
-  //assume the leftIR will follow the wall
-  ctlSysWallFllw(Kp);
+  int indexDirection = 1; //default index for EAST
+  char crrntRobotDir = mOrientation[indexDirection].mDirection;
+  lcd.setBacklight(RED);
 
-  //after a certain time has elapsed, assign a new cell 
-  //the old cell will be marked visited on the LCD
-  //fromCell - leaving this cell (mark as visited if not done so already)
   //toCell - going to this cell
 
-  //if time == numTime 
-  //  depending on the direction: update the fromCell as visited
   //  assign the new cell respectively
   /*  Going:
-   *  East  --> +1
-   *  South --> -4
-   *  West  --> -1
-   *  North --> +4
-   */
+      East  --> +1
+      South --> -4
+      West  --> -1
+      North --> +4
+  */
+
+
+  // 13 14 15 16
+  //  9 10 11 12
+  //  5  6  7  8
+  //  1  2  3  4
+
+  int lngF; //long Front value
+  bool cornerFlg = false;
+  bool leftTrnFlg = false;
+
+  int counter = 40;
+  int wfCntr = 0;
+  int dumShrtF = 0;
   
-  
-  
-  
+  while (1)
+  {
+    ++counter;
+    dumShrtF = trueDist(SFSensor, 20);
+    if (dumShrtF != 0)
+    {
+      shrtF = dumShrtF;
+    }
+    else
+    {
+      myMover.moveForwardALittle(100);
+      continue;
+    }
+    shrtL = trueDist(SLSensor, 10);
+
+    //Marks off cells that are visited
+    if (counter == 97)
+    {
+      counter = 0;
+      updateCellStatus(toCell, '0');
+
+      toCell = whereTo(crrntRobotDir, toCell);
+      print2DigitPayLoad(toCell, 10);
+    }
+
+    print2DigitPayLoad(counter, 14);
+    
+    if (shrtL < 9)
+    {
+      myMover.wallFollow(&wfCntr, &counter, shrtL);
+      if (cornerFlg)
+      {
+        myMover.stopRobot();
+        myMover.moveForwardALittle(200);
+        if (isAWall(shrtF))
+        {
+          myMover.rightTurn(&indexDirection, &crrntRobotDir);
+          updateDirection('r', &indexDirection, &crrntRobotDir, mOrientation);
+
+          counter = 40; //RIGHT turn middle of CELL
+        }
+        cornerFlg = false;
+        continue;
+      } else
+      {
+        cornerFlg = isAWall(shrtF);
+        continue;
+      }
+    } else if (shrtL >= 9)
+    {
+      //suspect that it is time for a LEFT turn sequence
+      if (leftTrnFlg)
+      {
+        if(counter > 90)
+        {
+          toCell = whereTo(crrntRobotDir, toCell);
+        }
+        myMover.leftTurn(&indexDirection, &crrntRobotDir);
+        updateDirection('l', &indexDirection, &crrntRobotDir, mOrientation);
+        updateCellStatus(toCell, '0');
+        toCell = whereTo(crrntRobotDir, toCell);
+        counter = 20;
+        leftTrnFlg = false;
+        continue;
+      } else
+      {
+        myMover.stopRobot();
+        leftTrnFlg = true;
+
+        continue;
+      }
+    }
+
+  }
   return;
 }
 
-void ctlSysWallFllw(int Kp)
+//LEFT Turn Function Here
+
+//********** Localization Specific Functions ****************
+bool isMazeTraverseComplete()
 {
-  shrtF = average(SFSensor, 5);
-  shrtL = average(SLSensor, 5);
-
-  shrtF = computeDistance_SIR(shrtF);
-  shrtL = computeDistance_SIR(shrtL);
-
-  errorL = SET_PT - shrtL; //error from LEFT
-  errorF = SET_PT - shrtF; //error from FRONT
-  gainL = Kp * errorL;
-  gainF = Kp * errorF;
-
-  if(shrtF > 6) //check front wall to know to keep going forward
+  for (int i = 0; i < 3; ++i)
   {
-    if(shrtL > 5) //too far from left wall
+    for (int j = 0; i < 3; ++i)
     {
-      lVel = 93;
-      rVel = 85;
-    }else if(shrtL < 5) //too close to left wall
-    {
-      lVel = 95;
-      rVel = 87;
-    }else if(shrtL == 5) //align
-    {
-      lVel = 90 - gainF;
-      rVel = 90 + gainF;
-    }else
-    {
-      lVel = 90 - gainF;
-      rVel = 90 + gainF;
+      if (grid[i][j] == 'X')
+      {
+        //there is an unvisited cell, return FALSE
+        return false;
+      }
     }
-  } else if(shrtF <= 5)//decision to make right turn
-  {
-    myMover.rightTurn(); //make right turn
   }
 
-  myMover.follow_vel(lVel, rVel);
-}
-
-void turnRight(){
-  
-  //update robot status
-  updateDirection('r');
-
- //command the movement
-  myMover.rightTurn();
-}
-
-void turnLeft(){
-  //update the robot status
-  updateDirection('l');
-
-  //command the movement
-  myMover.leftTurn();
-  
+  return true; //all cells are VISITED
 }
 
 
-void updateDirection(char turn)
-{ //change our cardinal orientation within the cube
-  
-  //  east --> right turn --> south (++1) 
-  //  east --> left turn --> north (--1)
-  
-    switch(turn){
-      case 'r':
-        indexDirection += 1;
-        break;
-      case 'l':
-        indexDirection -= 1;
-        break;
-    }
-  
-    if(indexDirection < 0){
-      indexDirection = 3; 
-    }else{
-      indexDirection = indexDirection % 4;  
-    }   
-
-    //update the robotDirection variable
-    robotDirection = (mOrientation[indexDirection].direction);
-    //update LCD color
-    lcd.setBacklight(mOrientation[indexDirection].color);
+//from the updateDirection(char turn, int* indxDir, char* rbtDir) function
+void updateLCDColor(int* indxDir, char* rbtDir)
+{
+  lcd.setBacklight(mOrientation[*indxDir].color);
+  lcd.setCursor(15,0);
+  lcd.print(*rbtDir);
 }
 
 
-
-// 13 14 15 16
+void updateCellStatus(int cellNumber, char status) 
+{
+ // 13 14 15 16
 //  9 10 11 12
 //  5  6  7  8
 //  1  2  3  4
-
-void updateCellStatus(int cellNumber, char status){
-
   //char status is only one character to update the status
 
-  switch(cellNumber){
+  switch (cellNumber) {
     case 1:
-      lcd.setCursor(5,1);
+      lcd.setCursor(5, 1);
       lcd.print(status);
+      grid[3][0] = '0';
       break;
     case 2:
-      lcd.setCursor(6,1);
+      lcd.setCursor(6, 1);
       lcd.print(status);
+      grid[3][1] = '0';
       break;
     case 3:
-      lcd.setCursor(7,1);
+      lcd.setCursor(7, 1);
       lcd.print(status);
+      grid[3][2] = '0';
       break;
     case 4:
-      lcd.setCursor(8,1);
+      lcd.setCursor(8, 1);
       lcd.print(status);
+      grid[3][3] = '0';
       break;
     case 5:
-      lcd.setCursor(5,0);
+      lcd.setCursor(5, 0);
       lcd.print(status);
+      grid[2][0] = '0';
       break;
     case 6:
-      lcd.setCursor(6,0);
+      lcd.setCursor(6, 0);
       lcd.print(status);
+      grid[2][1] = '0';
       break;
     case 7:
-      lcd.setCursor(7,0);
+      lcd.setCursor(7, 0);
       lcd.print(status);
+      grid[2][2] = '0';
       break;
     case 8:
-      lcd.setCursor(8,0);
+      lcd.setCursor(8, 0);
       lcd.print(status);
+      grid[2][3] = '0';
       break;
     case 9:
-      lcd.setCursor(0,1);
+      lcd.setCursor(0, 1);
       lcd.print(status);
+      grid[1][0] = '0';
       break;
     case 10:
-      lcd.setCursor(1,1);
+      lcd.setCursor(1, 1);
       lcd.print(status);
+      grid[1][1] = '0';
       break;
     case 11:
-      lcd.setCursor(2,1);
+      lcd.setCursor(2, 1);
       lcd.print(status);
+      grid[1][2] = '0';
       break;
     case 12:
-      lcd.setCursor(3,1);
+      lcd.setCursor(3, 1);
       lcd.print(status);
+      grid[1][3] = '0';
       break;
     case 13:
-      lcd.setCursor(0,0);
+      lcd.setCursor(0, 0);
       lcd.print(status);
+      grid[0][0] = '0';
       break;
     case 14:
-      lcd.setCursor(1,0);
+      lcd.setCursor(1, 0);
       lcd.print(status);
+      grid[0][1] = '0';
       break;
     case 15:
-      lcd.setCursor(2,0);
+      lcd.setCursor(2, 0);
       lcd.print(status);
+      grid[0][2] = '0';
       break;
     case 16:
-      lcd.setCursor(3,0);
+      lcd.setCursor(3, 0);
       lcd.print(status);
+      grid[0][3] = '0';
       break;
   }
+
+  print2DigitPayLoad(cellNumber, 10);
 }
 
-//make multiple measurements and return the average
-int average(int sensor, int loops)
-{
-  int value;
-  for(int i = 0; i < loops; ++i)
-  {
-     value += analogRead(sensor);
-  }
-  return value / loops;
-}
+//******** Navigation Specific Functions ***********
 
-void configureArray(){
 
-  //Red - Right
-  //Green - Left
-  //Blue - Up
-  //Yellow - Down
-  
-  //north
-  mOrientation[0].direction = 'N';
-  mOrientation[0].color = BLUE;
+//bool isAWall();
+//void moveCloserToWall();
+//void moveAwayFromWall();
+//void alignWithWall();
+//moveForwardALittle();
+//Stop Robot();
+//int trueDist(int sensor, int loops);
 
-  //east
-  mOrientation[1].direction = 'E';
-  mOrientation[1].color = RED;
 
-  //west 
-  mOrientation[2].direction = 'W';
-  mOrientation[2].color = GREEN;
 
-  //south
-  mOrientation[3].direction = 'S';
-  mOrientation[3].color = YELLOW;
-}
 

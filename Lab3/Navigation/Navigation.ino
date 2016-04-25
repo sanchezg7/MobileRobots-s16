@@ -145,9 +145,9 @@ void Navigation()
   {
     shrtF = trueDist(SFSensor, 10);
     shrtL = trueDist(SLSensor, 10);
-    longF = longTrueDist(LFSensor, 20);
+    //longF = longTrueDist(LFSensor, 20);
     
-    printLCD(shrtF, shrtL, lngF, rVel);
+    printLCD(shrtF, shrtL, lVel, rVel);
 
     //CORNER case - YELLOW
     //LEFT turn - GREEN
@@ -168,28 +168,25 @@ void Navigation()
         }
         cornerFlg = false;
         continue;
-      }else { cornerFlg = isAWall(shrtF); }
+      }else 
+      {
+        cornerFlg = isAWall(shrtF); 
+        
+      }
       
     }else if(shrtL >= 9)
     {
       //suspect that it is time for a LEFT turn sequence
       if(leftTrnFlg)
       {
-        moveForwardALittle();
         leftTurn();
         leftTrnFlg = false;
         continue;
-//        if(isAWall(shrtF))
-//        {
-//          //perform left turn
-//          leftTurn();
-//          leftTrnFlg = false;
-//          continue;
-//        }
+
       }else
       { 
         stopRobot();
-        leftTrnFlg = isAWall(shrtF); 
+        leftTrnFlg = true;
         continue;
       }
         
@@ -199,29 +196,25 @@ void Navigation()
 
 bool isAWall(int shrtF)
 {
-  return shrtF < 6;
-}
-
-bool longIsAWall(int longF)
-{
-  return (longF < 21 && longF > 9);
+  return shrtF < 5;
 }
 
 
 void wallFollow(int* wfCntr, const int shrtL)
 {
-  if(shrtL > 5)
+  int threshold = 4;
+  if(shrtL > threshold)
   {
     //Left Wall is in range, follow it accordingly.
      ++*wfCntr;   
      moveCloserToWall();
-     if(*wfCntr == 3)
+     if(*wfCntr == 5)
      {
         wfCntr = 0;
         //offset the movement by moving in the opposite direction
-        moveAwayFromWall();
+        moveAwayFromWall();  
      }
-   }else if(shrtL < 5)
+   }else if(shrtL < threshold)
    {
       //The robot is too close to wall. Move away.
       ++*wfCntr;
@@ -231,7 +224,7 @@ void wallFollow(int* wfCntr, const int shrtL)
         wfCntr = 0;
         moveCloserToWall();
       }
-  } else if(shrtL == 5)
+  } else if(shrtL == threshold)
   {
     *wfCntr = 0;
     alignWithWall();
@@ -241,68 +234,74 @@ void wallFollow(int* wfCntr, const int shrtL)
 
 void rightTurn()
 {  
-  lVel = 100;
-  rVel = 90;
-  myMover.cmd_vel(lVel, rVel);
-  delay(1100);
-  
+  int mlVel = 95;
+  int mrVel = 96;
+  myMover.cmd_vel(mlVel, mrVel);
+  delay(800);
 }
 
 void leftTurn()
 {
-  //perform the left turn!
-  //myMover.cmd_vel(90, 80);
-  lVel = 90;
-  rVel = 80;
-  myMover.cmd_vel(lVel, rVel);
+  lcd.clear();
+  lcd.setCursor(0,0);
+  lcd.print("Left Turn");
+  
+  moveForwardALittle(1000);
+  
+  stopRobot(); 
+  
+  //perform the left turn!  
+  int mlVel = 90;
+  int mrVel = 80;
+  myMover.cmd_vel(mlVel, mrVel);
   delay(1200);
+
+  moveForwardALittle(1000);
 }
 
 
-// <= 5 95, 88
-// >= 7 92, 85
 void moveCloserToWall()
 { //too far from wall 
   //myMover.cmd_vel(93, 85);
-  lVel = 95; 
-  rVel = 83; //SPEED right up
-  myMover.cmd_vel(lVel, rVel);
+  int mlVel = 95; 
+  int mrVel = 83; //SPEED right up
+  myMover.cmd_vel(mlVel, mrVel);
   //delay(200);  
 }
 
 void moveAwayFromWall()
 { //too close to wall
  // myMover.cmd_vel(95, 87);
- lVel = 97; //SPEED left up
- rVel = 86; 
- myMover.cmd_vel(lVel, rVel);
+ int mlVel = 97; //SPEED left up
+ int mrVel = 86; 
+ myMover.cmd_vel(mlVel, mrVel);
  //delay(200);       
 }
 
 void alignWithWall()
 { //align
   //myMover.cmd_vel(95, 85);
-  lVel = 95,
-  rVel = 86; //right motor is weaker
-  myMover.cmd_vel(lVel, rVel);
-  //delay(200); //allow robot to update quicker when aligned
+  int mlVel = 95;
+  int mrVel = 86; //right motor is weaker
+  myMover.cmd_vel(mlVel, mrVel);
+  
 }
 
-void moveForwardALittle()
-{//move forward a little before left turn
+void moveForwardALittle(int mDelay)
+{ //move forward a little before left turn
   //myMover.cmd_vel(95, 85);//allow robot to move forward a bit before turning left
-  lVel = 95;
-  rVel = 85;
-  myMover.cmd_vel(lVel, rVel);
-  delay(1200); //allow the robot to move to the center of the cell to spin to the left
+  int mlVel = 95;
+  int mrVel = 85;
+  myMover.cmd_vel(mlVel, mrVel);
+  delay(mDelay); //allow the robot to move to the center of the cell to spin to the left
 }
 
 void stopRobot()
 {//stops robot
   //myMover.cmd_vel(90,90);
-  lVel = 90;
-  rVel = 90;
-  myMover.cmd_vel(lVel, rVel);
+  int mlVel = 90;
+  int mrVel = 90;
+  myMover.cmd_vel(mlVel, mrVel);
   delay(500);
 }
 
