@@ -1,13 +1,22 @@
-#ifndef __roboBullMotion_h
-#define __roboBullMotion_h
+#ifndef __roboMoverMotion_h
+#define __robotMoverMotion_h
 #include <Servo.h>
 #include <Wire.h>
 #include <Arduino.h>
+#include <Adafruit_RGBLCDShield.h>
 
 
- //extern Servo LServo;
- //extern Servo RServo;
 
+typedef struct orientation {
+  char mDirection;
+  int color;
+} orientation;
+
+//Helper functions
+int whereTo(const char cardinalDir, int tempToCell);
+void updateDirection(char turn, int* indxDir, char* rbtDir, orientation mOrientation[]);
+void cnfgOrientations(orientation* mOrientation);
+ 
 class robotMover{
 private:
 	Servo LServo;
@@ -26,8 +35,17 @@ public:
 	void fig8_circle_20(int time);
 	void fig8_cnt_circle_20(int time);
 	void follow_vel(int lVel, int rVel);
-	void rightTurn();
-	void leftTurn();
+	void basic_right();
+	void basic_left();
+	void leftTurn(int* indexDir, char* rbtDir);
+	void rightTurn(int* indexDir, char* rbtDir);
+	void moveForwardALittle(int mDelay);
+	void stopRobot();
+	void wallFollow(int* wfCntr, int* cellCntr, const int shrtL);
+	void moveCloserToWall();
+	void moveAwayFromWall();
+	void alignWithWall();
+	
 
 };
 

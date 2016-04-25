@@ -26,6 +26,37 @@ int computeDistance_SIR(int value){
   return distance;
 }
 
+//new trueDist because if we get a lot of bad values we will get a bad average
+int trueDist(int sensor, int loops)
+{
+  int value = 0;
+  int i = 0;
+  int c = 0;
+  while (i < loops)
+  {
+    int distance = computeDistance_SIR(analogRead(sensor));
+    if (distance != -1)
+    {
+      value += distance;
+    } else
+    {
+      if (c == 30)
+      {
+        break;
+      }
+      if (i == 0)
+        i = 0;
+      else
+        i -= 1;
+      ++c;
+    }
+    ++i;
+
+  }
+  return value / loops;
+}
+
+
 int longComputeDist(int LValueF)
 {
 	int distance = -1;
@@ -56,4 +87,12 @@ int longComputeDist(int LValueF)
   }
 
   return (int) distance;
+}
+
+bool isAWall(int shrtF)
+{
+  int mythreshold = 6;
+//  lcd.setCursor(15, 1);
+//  lcd.print(shrtF);
+  return shrtF < mythreshold;
 }
